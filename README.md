@@ -6,3 +6,4 @@
 - MariaDB: setup mariadb cluster with ansible (master-master)
 
 # This tasks should be finish in 24 hours
+# You should present the result
