@@ -31,77 +31,57 @@
           - mariadb-client
           # - mariadb-common
 
-    - name: Edit my.cnf
-      ansible.builtin.lineinfile:
-        path: /etc/mysql/my.cnf
-        regexp: 'bind-address = 0.0.0.0'
-        line: 'bind-address = 0.0.0.0'
-        state: present
-
-    - name: Restart and Enable MariaDB
-      ansible.builtin.service:
-        name: mysql
-        state: restarted
-        enabled: true
-
-    - name: Delete Anonymous user
-      community.mysql.mysql_user:
-        name: ''
-        host: localhost
-        state: absent
-        login_unix_socket: /run/mysqld/mysqld.sock
-
-    - name: Set Root Password with defined variable
-      community.mysql.mysql_user:
-        name: "root"
-        password: "{{root_password}}"
-        host: "{{item}}"
-        login_unix_socket: /run/mysqld/mysqld.sock
-      with_items:
-        - localhost
-        # - 127.0.0.1
-        # - ::1
-
-### RUN ON MASTER SERVER ONLY
-# when: inventory_hostname in groups["master[0]"]   
     - name: Add line in my.cnf
       ansible.builtin.lineinfile:
         path: /etc/mysql/my.cnf
         regexp: "{{item}}"
         line: "{{item}}"
         state: present
-      when: inventory_hostname in groups["master"]
       with_items:
-        - "server-id = 1"
+        - "[mysqld]"
+        - "bind-address = 0.0.0.0"
         - "log_bin = /var/log/mysql/mysql-bin.log"
         - "max_binlog_size = 100M"
         - "relay_log = /var/log/mysql/mysql-relay-bin"
         - "relay_log_index = /var/log/mysql/mysql-relay-bin.index"
 
+    # - name: Delete Anonymous user
+    #   community.mysql.mysql_user:
+    #     name: ''
+    #     host: localhost
+    #     state: absent
+    #     login_unix_socket: /run/mysqld/mysqld.sock
+
+    # - name: Set Root Password with defined variable
+    #   community.mysql.mysql_user:
+    #     name: "root"
+    #     password: "{{root_password}}"
+    #     host: "{{item}}"
+    #     login_unix_socket: /run/mysqld/mysqld.sock
+    #   with_items:
+    #     - localhost
+    #     # - 127.0.0.1
+    #     # - ::1
+
+### RUN ON MASTER SERVER ONLY
+# when: inventory_hostname in groups["master[0]"][0]
+
+    - name: Add line in my.cnf
+      ansible.builtin.lineinfile:
+        path: /etc/mysql/my.cnf
+        regexp: "{{item}}"
+        line: "{{item}}"
+        state: present
+      with_items:
+        - "server-id = 1"
+      when: inventory_hostname in groups["master"][0]
 
     - name: Restart and Enable MariaDB
       ansible.builtin.service:
         name: mysql
         state: restarted
         enabled: true
-
-    - name: Delete Anonymous user
-      community.mysql.mysql_user:
-        name: ''
-        host: localhost
-        state: absent
-        login_unix_socket: /run/mysqld/mysqld.sock
-
-    - name: Set Root Password with defined variable
-      community.mysql.mysql_user:
-        name: "root"
-        password: "{{root_password}}"
-        host: "{{item}}"
-        login_unix_socket: /run/mysqld/mysqld.sock
-      with_items:
-        - localhost
-        # - 127.0.0.1
-        # - ::1
+      when: inventory_hostname in groups["master"][0]
 
     - name: Create Database "{{database}}"
       community.mysql.mysql_db: 
@@ -118,4 +98,78 @@
         login_user: root
         login_password: "{{root_password}}"
         state: present
+    
+    - name: "Create user dbrep for replication"
+      community.mysql.mysql_user:
+        name: "dbrep"
+        password: "dbrep"
+        priv: "*.*:REPLICATION SLAVE"
+        host: "%"
+        login_user: root
+        login_password: "{{root_password}}"
+        state: present
+      when: inventory_hostname in groups["master"][0]
 
+    - name: Get Master Status
+      community.mysql.mysql_info:
+        login_user: root
+        login_password: "{{root_password}}"
+        login_unix_socket: /run/mysqld/mysqld.sock
+      register: master_status
+      when: inventory_hostname in groups["master"][0]
+
+    - name: Get Master Host
+      command: echo "{{hostvars[inventory_hostname].inventory_hostname}}"
+      register: master_host
+      when: inventory_hostname in groups["master"][0]
+
+### RUN ON SLAVE ONLY
+# when: inventory_hostname in groups["slave"]
+
+    - set_fact:
+        master_host: "{{ hostvars[groups['master'].0].master_host }}"
+        master_log_file: "{{ hostvars[groups['master'].0].master_status.master_status.File }}"
+        master_log_pos: "{{ hostvars[groups['master'].0].master_status.master_status.Position }}"
+
+    - name: Add line in my.cnf
+      ansible.builtin.lineinfile:
+        path: /etc/mysql/my.cnf
+        regexp: "{{item}}"
+        line: "{{item}}"
+        state: present
+      with_items:
+        - "server-id = 2"
+      when: inventory_hostname in groups["slave"]
+
+    - name: Stop and then Reset Slave Server
+      community.mysql.mysql_replication:
+        mode: "{{item}}"
+        login_user: root
+        login_password: "{{root_password}}"
+        login_host: localhost
+      when: inventory_hostname in groups["slave"]
+      with_items:
+        - stopreplica
+        - resetreplica
+
+    - name: Config Slave Server
+      community.mysql.mysql_replication:
+        mode: changeprimary
+        login_user: root
+        login_password: "{{root_password}}"
+        login_host: localhost
+        # primary_host : "{{master_host}}"
+        MASTER_HOST : 172.17.136.104
+        MASTER_USER : "dbrep"
+        MASTER_PASSWORD : "dbrep"
+        MASTER_LOG_FILE : "{{master_log_file}}" 
+        MASTER_LOG_POS : "{{master_log_pos}}"
+      when: inventory_hostname in groups["slave"]
+
+      name: Start Slave Server
+      community.mysql.mysql_replication:
+        mode: startreplica
+        login_user: root
+        login_password: "{{root_password}}"
+        login_host: localhost
+      when: inventory_hostname in groups["slave"]
