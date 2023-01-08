@@ -1,0 +1,80 @@
+- name: MariaDB Single Master Server Setup 
+  hosts: master
+  vars:
+    - root_password: rootpswd
+    - db_username: user
+    - db_password: password
+    - database: newdb
+  become: true
+
+  tasks:
+
+    - name: Run Apt Update
+      ansible.builtin.apt:
+        update_cache: true
+      
+    - name: Install Python and Pip for Ansible Script
+      ansible.builtin.apt:
+        name:
+          - python3
+          - python3-pip
+
+    - name: Install Python Module for Ansible MariaDB Automation
+      ansible.builtin.pip:
+        name:
+          - PyMySQL
+        
+    - name: MariaDB Installation
+      ansible.builtin.apt:
+        name:
+          - mariadb-server
+          - mariadb-client
+          # - mariadb-common
+
+    - name: Edit my.cnf
+      ansible.builtin.lineinfile:
+        path: /etc/mysql/my.cnf
+        regexp: 'bind-address = 0.0.0.0'
+        line: 'bind-address = 0.0.0.0'
+        state: present
+
+    - name: Restart and Enable MariaDB
+      ansible.builtin.service:
+        name: mysql
+        state: restarted
+        enabled: true
+
+    - name: Delete Anonymous user
+      community.mysql.mysql_user:
+        name: ''
+        host: localhost
+        state: absent
+        login_unix_socket: /run/mysqld/mysqld.sock
+
+    - name: Set Root Password with defined variable
+      community.mysql.mysql_user:
+        name: "root"
+        password: "{{root_password}}"
+        host: "{{item}}"
+        login_unix_socket: /run/mysqld/mysqld.sock
+      with_items:
+        - localhost
+        # - 127.0.0.1
+        # - ::1
+
+    - name: Create Database "{{database}}"
+      community.mysql.mysql_db: 
+        name: "{{database}}"
+        login_user: root
+        login_password: "{{root_password}}"
+        login_host: localhost
+    
+    - name: "Create user {{db_username}} for database {{database}}"
+      community.mysql.mysql_user:
+        name: "{{db_username}}"
+        password: "{{db_password}}"
+        priv: "{{database}}.*:ALL,GRANT"
+        login_user: root
+        login_password: "{{root_password}}"
+        state: present
+
