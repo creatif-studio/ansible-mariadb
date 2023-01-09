@@ -29,7 +29,13 @@
         name:
           - mariadb-server
           - mariadb-client
-          # - mariadb-common
+
+    - name: add [mysqld] in my.cnf
+      ansible.builtin.lineinfile:
+        path: /etc/mysql/my.cnf
+        regexp: "\\[mysqld]"
+        line: "[mysqld]"
+        state: present
 
     - name: Edit my.cnf
       ansible.builtin.lineinfile:
@@ -59,8 +65,6 @@
         login_unix_socket: /run/mysqld/mysqld.sock
       with_items:
         - localhost
-        # - 127.0.0.1
-        # - ::1
 
     - name: Create Database "{{database}}"
       community.mysql.mysql_db: 

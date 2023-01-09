@@ -1,5 +1,5 @@
-- name: MariaDB Master Slave Setup 
-  hosts: all
+- name: MariaDB Multi Master Setup 
+  hosts: master
   vars:
     - root_password: rootpswd
     - db_username: user
@@ -43,7 +43,7 @@
         regexp: "{{item}}"
         line: "{{item}}"
         state: present
-      with_items:
+      with_items: 
         - "bind-address = 0.0.0.0"
         - "log_bin = /var/log/mysql/mysql-bin.log"
         - "max_binlog_size = 100M"
@@ -66,10 +66,7 @@
       with_items:
         - localhost 
 
-### RUN ON MASTER SERVER ONLY
-# when: inventory_hostname in groups["master[0]"][0]
-
-    - name: Add server-id line in Master Server my.cnf
+    - name: Add server-id line in my.cnf[Server 0]
       ansible.builtin.lineinfile:
         path: /etc/mysql/my.cnf
         regexp: "{{item}}"
@@ -79,41 +76,7 @@
         - "server-id = 1"
       when: inventory_hostname in groups["master"][0]
 
-    - name: Restart and Enable Master Server MariaDB
-      ansible.builtin.service:
-        name: mysql
-        state: restarted
-        enabled: true
-      when: inventory_hostname in groups["master"][0]
-    
-    - name: "Create user dbrep for replication in Master Server"
-      community.mysql.mysql_user:
-        name: "dbrep"
-        password: "dbrep"
-        priv: "*.*:REPLICATION SLAVE"
-        host: "%"
-        login_user: root
-        login_password: "{{root_password}}"
-        state: present
-      when: inventory_hostname in groups["master"][0]
-
-    - name: Get Master Status
-      community.mysql.mysql_info:
-        login_user: root
-        login_password: "{{root_password}}"
-        login_unix_socket: /run/mysqld/mysqld.sock
-      register: master_status
-      when: inventory_hostname in groups["master"][0]
-
-    - name: Get Master Host
-      command: echo "{{hostvars[inventory_hostname].inventory_hostname}}"
-      register: master_host
-      when: inventory_hostname in groups["master"][0]
-
-### RUN ON SLAVE ONLY
-# when: inventory_hostname in groups["slave"]
-
-    - name: Add server-id and read only line in Slave Server my.cnf
+    - name: Add server-id line in my.cnf[Server 1]
       ansible.builtin.lineinfile:
         path: /etc/mysql/my.cnf
         regexp: "{{item}}"
@@ -121,48 +84,89 @@
         state: present
       with_items:
         - "server-id = 2"
-        - "read-only" = 1"
-      when: inventory_hostname in groups["slave"]
+      when: inventory_hostname in groups["master"][1:]
+    
+    - name: "Create user dbrep for replication"
+      community.mysql.mysql_user:
+        name: "dbrep"
+        password: "dbrep"
+        priv: "*.*:REPLICATION SLAVE"
+        host: "%"
+        login_user: root
+        login_password: "{{root_password}}"
+        state: present 
 
-    - name: Restart and Enable Slave Server MariaDB
+    - name: Restart and Enable MariaDB
       ansible.builtin.service:
         name: mysql
         state: restarted
-        enabled: true
-      when: inventory_hostname in groups["slave"]
+        enabled: true 
 
-    - name: Stop and then Reset Slave Server
+    - name: Get Master Status
+      community.mysql.mysql_info:
+        login_user: root
+        login_password: "{{root_password}}"
+        login_unix_socket: /run/mysqld/mysqld.sock
+      register: master_status 
+
+    - name: Get Master Host
+      command: echo "{{hostvars[inventory_hostname].inventory_hostname}}"
+      register: master_host 
+ 
+    - name: Stop and then Reset Replication
       community.mysql.mysql_replication:
         mode: "{{item}}"
         login_user: root
         login_password: "{{root_password}}"
         login_host: localhost
-      when: inventory_hostname in groups["slave"]
+      when: inventory_hostname in groups["master"]
       with_items:
         - stopreplica
         - resetreplica
 
-    - name: Config Slave Server
+    - name: Config Replication[Server 0]
+      community.mysql.mysql_replication:
+        mode: changeprimary
+        login_user: root
+        login_password: "{{root_password}}"
+        login_host: localhost
+        primary_host : "{{ hostvars[groups['master'].1].master_host }}"
+        # primary_host : "172.17.132.107"
+        primary_user : "dbrep"
+        primary_password : "dbrep"
+        primary_log_file : "{{ hostvars[groups['master'].1].master_status.master_status.File }}"
+        primary_log_pos : "{{ hostvars[groups['master'].1].master_status.master_status.Position }}"
+      when: inventory_hostname in groups["master"][0]
+
+    - name: Config Replication[Server 1]
       community.mysql.mysql_replication:
         mode: changeprimary
         login_user: root
         login_password: "{{root_password}}"
         login_host: localhost
         primary_host : "{{ hostvars[groups['master'].0].master_host }}"
-        # primary_host : 172.17.137.109
+        # primary_host : "172.17.133.26"
         primary_user : "dbrep"
         primary_password : "dbrep"
         primary_log_file : "{{ hostvars[groups['master'].0].master_status.master_status.File }}"
         primary_log_pos : "{{ hostvars[groups['master'].0].master_status.master_status.Position }}"
-      when: inventory_hostname in groups["slave"]
+      when: inventory_hostname in groups["master"][1:]
 
-    - name: Start Slave Server
+    - name: Start Replica on Master 0
       community.mysql.mysql_replication:
         mode: startreplica
         login_user: root
         login_password: "{{root_password}}"
-        login_host: localhost
-      when: inventory_hostname in groups["slave"][0]
+        login_host: localhost 
+      when: inventory_hostname in groups["master"][0]
+
+    - name: Start Replica on Master 1
+      community.mysql.mysql_replication:
+        mode: startreplica
+        login_user: root
+        login_password: "{{root_password}}"
+        login_host: localhost 
+      when: inventory_hostname in groups["master"][1]
 
     - name: Create Database "{{database}}"
       community.mysql.mysql_db: 
