@@ -66,16 +66,33 @@ ssh ubuntu@other-slave-server-ip
 ```
 
 ## Step 7
+Login into MySQL
+```
+sudo mysql -u root
+```
+
+If you configure root with password, enter this instead
+```
+sudo mysql -u root -p
+```
+
+## Step 8
 Stop and reset slave replication
 ```
 stop slave;
 reset slave;
 ```
 
-## Step 8
+## Step 9
 Run this query, change the variable into what you note before
 ```
 CHANGE MASTER TO MASTER_HOST = '<your new master server ip>', MASTER_USER = '<replication user>', MASTER_PASSWORD = '<replication password>', MASTER_LOG_FILE = '<your master log file>', MASTER_LOG_POS = <your master log position>;
 ```
 
-Repeat step 6 - 8 for each of your slave server
+## Step 10
+Run replication with this query
+```
+start slave;
+```
+
+Repeat step 6 - 10 for each of your slave server
