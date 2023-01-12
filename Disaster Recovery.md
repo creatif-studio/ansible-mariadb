@@ -2,10 +2,15 @@
 
 In an event/disaster where Master Database Server can't be accessed, down, or deleted we need to promote a Slave Server into a Master Server to minimize down time
 
+In this step by step case, we have 3 Database Server. 1 Master(Server A) and 2 Slave(Server B and Server C). Server A is currently down and we want to promote Server B from Slave Server into Master Server
+
+![image](https://user-images.githubusercontent.com/67664879/212128421-aba57700-a20d-4a48-bfad-f518fbe1eeaf.png)
+
+
 ## Step 1
-SSH into one of your Slave Server you want to promote into Master Server 
+SSH into Server B 
 ```
-ssh ubuntu@slave-server-ip
+ssh ubuntu@server-b-ip
 ```
 
 ## Step 2
@@ -41,8 +46,8 @@ SET read_only false;
 Your new master server is now ready
 
 ## Step 5(and so on is optional)
-If you have other slave server, you can point them to your new master server
-In your new Master Server, run this
+If want other slave server to still run replication, you can point them to your new master server
+In your new Master Server(Server B), run this
 
 ```
 SHOW MASTER STATUS;
@@ -60,9 +65,9 @@ Note down the `File`, `Position`, and your server IP
 
 ## Step 6
 
-SSH into your other Slave Server
+SSH into your other Slave Server(Server C)
 ```
-ssh ubuntu@other-slave-server-ip
+ssh ubuntu@server-c-ip
 ```
 
 ## Step 7
