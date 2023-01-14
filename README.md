@@ -88,3 +88,92 @@ vagrant destroy ubuntu2
 
 # This tasks should be finish in 24 hours
 # You should present the result -->
+
+```
+project-name/
+├── ansible/
+│   ├── files/
+│   │   ├── [file1]              # any files needed to be copied to the remote host
+│   │   └── [file2]
+│   ├── group_vars/
+│   │   ├── [group1]             # group-specific variables
+│   │   └── [group2]
+│   ├── templates/
+│   │   ├── [template1]          # Jinja2 templates
+│   │   └── [template2]
+│   ├── tasks/
+│   │   ├── [task1]              # Ansible tasks
+│   │   └── [task2]
+│   ├── roles/
+│   │   ├── single/
+│   │   │   ├── tasks/
+│   │   │   │   ├── [task1]       # tasks related to single MySQL installation
+│   │   │   │   └── [task2]
+│   │   │   ├── vars/
+│   │   │   │   ├── [var1]         # vars related to single MySQL installation
+│   │   │   │   └── [var2]
+│   │   │   ├── templates/
+│   │   │   │   ├── [template1]    # templates related to single MySQL installation
+│   │   │   │   └── [template2]
+│   │   │   └── files/
+│   │   │       ├── [file1]        # files related to single MySQL installation
+│   │   │       └── [file2]
+│   │   └── cluster/
+│   │       ├── tasks/
+│   │       │   ├── [task1]       # tasks related to cluster MySQL installation
+│   │       │   └── [task2]
+│   │       ├── vars/
+│   │       │   ├── [var1]         # vars related to cluster MySQL installation
+│   │       │   └── [var2]
+│   │       ├── templates/
+│   │       │   ├── [template1]    # templates related to cluster MySQL installation
+│   │       │   └── [template2]
+│   │       └── files/
+│   │           ├── [file1]        # files related to cluster MySQL installation
+│   │           └── [file2]
+├── terraform/
+│   ├── environments/
+│   │   ├── [environment1]       # environment-specific variables
+│   │   └── [environment2]
+│   ├── modules/
+│   │   ├── [module1]            # Terraform modules
+│   │   └── [module2]
+│   ├── providers/
+│   │   ├── [provider1]          # provider-specific configuration
+│   │   └── [provider2]
+│   ├── scripts/
+│   │   ├── [script1]            # any scripts used in Terraform
+│   │   └── [script
+│   ├── main.tf                  # Terraform main configuration file
+│   └── aws/
+│       ├── [config1]             # Terraform AWS-specific configuration
+│       └── [config2]
+├── vagrant/
+│   ├── boxes/
+│   │   ├── [box1]               # Vagrant boxes
+│   │   └── [box2]
+│   ├── scripts/
+│   │   ├── [script1]            # any scripts used in Vagrant
+│   │   └── [script2]
+│   ├── Vagrantfile              # Vagrant main configuration file
+│   └── virtualbox/
+│       ├── [config1]             # Vagrant VirtualBox-specific configuration
+│       └── [config2]
+├── bash/
+│   ├── development/
+│   │   ├── [script1]            # development-related bash scripts
+│   │   └── [script2]
+│   └── production/
+│       ├── [script1]             # production-related bash scripts
+│       └── [script2]
+├── mysql/
+│   ├── [package1]                # MySQL install package
+│   ├── [config1]                 # MySQL config files
+│   └── [relatedfile1]           # other related MySQL files
+├── logs/
+│   ├── [log1]                    # logs generated during installation process
+│   └── [log2]
+└── doc/
+    ├── [doc1]                     # documentation of installation process and setup
+    └── [doc2]
+```
