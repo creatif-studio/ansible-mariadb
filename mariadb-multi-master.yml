@@ -130,7 +130,7 @@
         login_user: root
         login_password: "{{root_password}}"
         login_host: localhost
-        primary_host : "{{ hostvars[groups['master'].1].master_host }}"
+        primary_host : "{{ hostvars[groups['master'].1].master_host.stdout }}"
         # primary_host : "172.17.132.107"
         primary_user : "dbrep"
         primary_password : "dbrep"
@@ -144,7 +144,7 @@
         login_user: root
         login_password: "{{root_password}}"
         login_host: localhost
-        primary_host : "{{ hostvars[groups['master'].0].master_host }}"
+        primary_host : "{{ hostvars[groups['master'].0].master_host.stdout }}"
         # primary_host : "172.17.133.26"
         primary_user : "dbrep"
         primary_password : "dbrep"
