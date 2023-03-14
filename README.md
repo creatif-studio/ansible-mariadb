@@ -1,83 +1,59 @@
-# MariaDB with Ansible
+# MariaDB Deployer
 
-## Ansible
-Script included in this repository :
-- MariaDB Single Server
-- MariaDB Master-Slave Replication
-- MariaDB Multi-Master Replication
+This project provides a set of Ansible, Terraform and Vagrant configuration files to deploy a docker application to a local/cloud environment. The deployment process includes setting up the necessary infrastructure, configuring servers, installing software, and starting the application.
 
-### BEFORE RUNNING SCRIPT
-Before running this playbook, make sure you edit `inventory.ini` according to your server IP Address
-```
-[master] 
-10.10.10.1
+## Prerequisites
 
-[slave]
-10.10.10.2
+To use this project, you will need the following:
 
-[all:vars]
-ansible_connection='ssh'
-ansible_ssh_port='22'
-ansible_user='vagrant'
-ansible_ssh_private_key_file=/home/yuuzukatsu/.ssh/yzk
-```
-Put your wanna be Master Server ip address in \[master\] group and Slave Server in \[slave\] group
-Also edit `ansible_user` into USER WITH SUDO ACCESS and `ansible_ssh_private_key_file` with your SSH Key. Or if you prefer authentication with password, replace `ansible_ssh_private_key_file` into `ansible_password = yoursecurepassword`
+- A cloud provider account with appropriate permissions to create and manage resources.
+- Ansible, Terraform, Vagrant, VirtualBox installed on your local machine.
+- A valid SSH key pair for authenticating with the remote servers.
 
-In each you will find 4 variable :
-- root_password: yoursecurerootpassword
-- db_username: newuser
-- db_password: yoursecureuserpassword
-- database: newdb
+## Getting Started
 
-you can change those value into any you want
+To get started, follow these steps:
 
-### How to Run Script
-After editing `inventory.ini` you can run script with command `ansible-playbook -i inventory.ini playbook.yml` for example
-```
-ansible-playbook -i inventory.ini mariadb-multi-master.yml
-```
+1.  Clone the repository to your local machine:
 
-If you haven't configured passwordless sudo for your user, you can add `-K` at the end of the command for example 
-```
-ansible-playbook -i inventory.ini mariadb-multi-master.yml -K
-```
+    `git clone https://github.com/creatif-studio/boilerplate-deployer.git`
 
-### Current Script Limitation
-- Multi Master Script(mariadb-multi-master.yml) for now its recommended to start only 2 Master Server. If you add more than 2, the first server in \[master\] group will be the main point for all replication since every other master server will only point to the first server with this script configuration. You also need to edit `server_id = 2` in `/etc/mysql/my.cnf` into another number(EACH SERVER NEED TO HAVE UNIQUE SERVER_ID) other than 1 and 2.  And then run `start slave` in each of your extra Master Server
+2.  Navigate to the `ansible` directory and create the necessary environment-specific variable files for your deployment. See the README.md file in that directory for more information.
 
-- Master Slave Script(mariadb-master-slave.yml) for now only support MAX 1 Master Server and MAX 1 Slave Server. If you add more than 1 server, only the first one in \[slave\] will run replication. You can run start the other slave by editting `server_id = 2` in `/etc/mysql/my.cnf` into another number(EACH SERVER NEED TO HAVE UNIQUE SERVER_ID) other than 1 and 2. And then run `start slave` in each of your extra Slave Server
+3.  Navigate to the `terraform` directory and create the necessary `terraform.tfvars` file for your deployment. See the README.md file in that directory for more information.
 
-- Script doesnt support IPv6 for replication
+4.  Initialize the Terraform working directory:
 
-## Vagrant
-The Vagrantfile included in this repository will create 2 `Ubuntu 20` instance named `ubuntu` and `ubuntu2` with SSH Key authentication.
+    `terraform init`
 
-To spawn instance, run `vagrant up`
+5.  Provision the infrastructure:
 
-You can ssh into instance with command `vagrant ssh <instance name>` for example
-```
-vagrant ssh ubuntu2
-```
+    `terraform apply`
 
-If you prefer to SSH via other app like OpenSSH, PuTTY, etc. you need to edit `Vagrantfile` on this line
-```
-config.vm.provision "shell", inline: <<-SHELL
-    echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO+JyAQHdjnMLd6Hg5Pblet6L83Eetfu/ZeDoNlgPrr9 eddsa-key-20221230" >> /home/vagrant/.ssh/authorized_keys
-  SHELL
+6.  Once the infrastructure is provisioned, run the Ansible playbook to configure the servers and deploy the application:
+
+    `ansible-playbook terraform.yml` or `ansible-playbook vagrant.yml`
+
+## Directory Structure
+
+Here is an overview of the directory structure of this project:
 
 ```
-
-edit the echo line with your Public SSH Key
-
-To stop instance, run `vagrant halt <instance name>` for example
-```
-vagrant halt ubuntu2
-```
-
-To delete instance, run `vagrant destroy <instance name>` for example
-```
-vagrant destroy ubuntu2
+elastic-search-deployer/
+├── README.md
+├── ansible/
+│   ├── group_vars/
+│   ├── host_vars/
+│   ├── inventory/
+│   ├── main.yml
+│   └── roles/
+│       ├── common/
+│       ├── nginx/
+│       └── web/
+└── terraform/
+    ├── main.tf
+    ├── terraform.tfvars
+    └── variables.tf
 ```
 
 ## Contributing
